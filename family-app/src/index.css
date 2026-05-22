@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #000; color: #fff; font-family: system-ui, sans-serif; }
+#root { width: 100%; height: 100dvh; }
+
+/* Safe-area padding helpers */
+.pt-safe-or-4  { padding-top: max(1rem,  env(safe-area-inset-top)); }
+.pt-safe-or-10 { padding-top: max(2.5rem, env(safe-area-inset-top)); }
+.pt-safe-or-12 { padding-top: max(3rem,  env(safe-area-inset-top)); }
+.pb-safe-or-6  { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+.pb-safe-or-14 { padding-bottom: max(3.5rem, env(safe-area-inset-bottom)); }
+.pb-safe-or-16 { padding-bottom: max(4rem,   env(safe-area-inset-bottom)); }
+.pb-safe        { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Settings sheet slide-up animation */
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* Toast slide-up-fade */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-toast-in { animation: toast-in 0.2s ease both; }
+
+/* Toast bottom safe area */
+.bottom-safe-or-6 { bottom: max(1.5rem, env(safe-area-inset-bottom)); }

@@ -1,0 +1,86 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/admin/photos/upload-url",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ca8ce038-379d-45d8-9ee9-3d57404d8cdc",
+      "name": "Admin Photos Upload URL Webhook",
+      "webhookId": "b0c1d2e3-f4a5-6789-bcde-789012345678",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');\nconst { getSignedUrl } = require('@aws-sdk/s3-request-presigner');\nconst { randomUUID } = require('crypto');\n\nconst body = $input.first().json.body ?? {};\nconst patientId = $input.first().json.query?.patientId || body.patientId;\nconst { filename, contentType } = body;\n\nif (!patientId || !filename || !contentType) {\n  return [{ json: { success: false, error: 'patientId, filename, and contentType are required' } }];\n}\n\nconst accountId = process.env.R2_ACCOUNT_ID;\nconst accessKeyId = process.env.R2_ACCESS_KEY_ID;\nconst secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;\nconst bucket = process.env.R2_BUCKET_NAME;\nconst publicUrlBase = process.env.R2_PUBLIC_URL;\n\nconst s3 = new S3Client({\n  region: 'auto',\n  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,\n  credentials: { accessKeyId, secretAccessKey }\n});\n\nconst r2Key = `patients/${patientId}/photos/${randomUUID()}-${filename}`;\n\nconst command = new PutObjectCommand({\n  Bucket: bucket,\n  Key: r2Key,\n  ContentType: contentType\n});\n\ntry {\n  const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });\n  const publicUrl = `${publicUrlBase}/${r2Key}`;\n  return [{ json: { uploadUrl, r2Key, publicUrl } }];\n} catch (err) {\n  return [{ json: { success: false, error: `S3 Error: ${err.message}` } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "3fb89e1f-0d5b-4afd-987b-018fb6c4f656",
+      "name": "Admin Photos Upload URL"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        0
+      ],
+      "id": "4a6af6fe-1215-4484-8a92-2b564f9399dc",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Photos Upload URL Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Photos Upload URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Photos Upload URL": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}
+
+

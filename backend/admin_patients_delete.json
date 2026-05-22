@@ -1,0 +1,59 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "/admin/patients/delete",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-336, -48],
+      "id": "c1d2e3f4-a5b6-7890-cdef-901234567890",
+      "name": "Admin Patients Delete Webhook",
+      "webhookId": "d2e3f4a5-b6c7-8901-defa-012345678901",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\n\nconst patientId = $input.first().json.query?.patientId || $input.first().json.body?.patientId;\n\nif (!patientId) {\n  return [{ json: { success: false, error: 'patientId required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const patient = await redis.hgetall(`patient:${patientId}`);\n  if (!patient || !patient.name) {\n    await redis.quit();\n    return [{ json: { success: false, error: 'Patient not found' } }];\n  }\n\n  if (patient.deviceId) {\n    await redis.del(`device:${patient.deviceId}`);\n  }\n\n  const contactIds = await redis.lrange(`patient:${patientId}:contacts`, 0, -1);\n  for (const id of contactIds) {\n    await redis.del(`contact:${id}`);\n  }\n  await redis.del(`patient:${patientId}:contacts`);\n\n  const photoIds = await redis.lrange(`patient:${patientId}:photos`, 0, -1);\n  for (const id of photoIds) {\n    await redis.del(`photo:${id}`);\n  }\n  await redis.del(`patient:${patientId}:photos`);\n\n  await redis.del(`patient:${patientId}`);\n  await redis.srem('patients', patientId);\n\n  await redis.quit();\n  return [{ json: { success: true, deletedPatientId: patientId } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-128, -48],
+      "id": "e3f4a5b6-c7d8-9012-efab-123456789012",
+      "name": "Admin Patients Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [80, -48],
+      "id": "f4a5b6c7-d8e9-0123-fabc-234567890123",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Patients Delete Webhook": {
+      "main": [[{"node": "Admin Patients Delete", "type": "main", "index": 0}]]
+    },
+    "Admin Patients Delete": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "43502fcf3de2c9ad23faa9d492576b2b76e9de120e2ead41e9a00d37d70c0371"
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/admin/contacts/list",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -96,
+        -144
+      ],
+      "id": "d358f001-6f1c-44dc-94da-e885b4bf9d1d",
+      "name": "Admin Contacts List Webhook",
+      "webhookId": "b6c7d8e9-f0a1-2345-bcde-456789012345",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\n\nconst patientId = $input.first().json.query?.patientId || $input.first().json.body?.patientId;\n\nif (!patientId) {\n  return [{ json: { success: false, error: 'patientId required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const contactIds = await redis.lrange(`patient:${patientId}:contacts`, 0, -1);\n  const contacts = await Promise.all(\n    contactIds.map(async (id, i) => {\n      const c = await redis.hgetall(`contact:${id}`);\n      return { contactId: id, ...c, profilePhotoUrl: c.profilePhotoUrl || null, order: i };\n    })\n  );\n  await redis.quit();\n  return [{ json: { contacts } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        -144
+      ],
+      "id": "cdf64f98-c3f7-403c-829f-da62999638b0",
+      "name": "Admin Contacts List"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        320,
+        -144
+      ],
+      "id": "98b948fd-2f5e-4e71-a397-93a1a0174d51",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Contacts List Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Contacts List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Contacts List": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}

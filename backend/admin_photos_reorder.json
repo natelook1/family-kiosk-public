@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "/admin/photos/order",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        -160
+      ],
+      "id": "f8fa8804-d3de-41f2-ba56-517c00104fbf",
+      "name": "Admin Photos Reorder Webhook",
+      "webhookId": "b2c3d4e5-f6a7-8901-bcde-901234567891",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\n\nconst body = $input.first().json.body ?? {};\nconst patientId = $input.first().json.query?.patientId || body.patientId;\nconst { order } = body;\n\nif (!patientId || !Array.isArray(order)) {\n  return [{ json: { success: false, error: 'patientId and order array are required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  await redis.del(`patient:${patientId}:photos`);\n  if (order.length > 0) {\n    await redis.rpush(`patient:${patientId}:photos`, ...order);\n  }\n  for (let i = 0; i < order.length; i++) {\n    await redis.hset(`photo:${order[i]}`, 'order', String(i));\n  }\n  await redis.quit();\n  return [{ json: { success: true } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -160
+      ],
+      "id": "f8164e73-1d7e-45c3-9bc6-eb72f0e376da",
+      "name": "Admin Photos Reorder"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        64,
+        -160
+      ],
+      "id": "90261970-d3ac-463d-b14f-a9b4055cea0a",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Photos Reorder Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Photos Reorder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Photos Reorder": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}

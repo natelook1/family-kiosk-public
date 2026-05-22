@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Ken Burns variants — zoom-in with pan, zoom-out with pan */
+@keyframes kenburns-0 {
+  from { transform: scale(1)    translate(0,      0);      }
+  to   { transform: scale(1.12) translate(-1.5%, -1.5%);  }
+}
+@keyframes kenburns-1 {
+  from { transform: scale(1)    translate(0,     0);      }
+  to   { transform: scale(1.12) translate(1.5%, -1.5%);  }
+}
+@keyframes kenburns-2 {
+  from { transform: scale(1.12) translate(-1.5%, 1%);    }
+  to   { transform: scale(1)    translate(0,     0);     }
+}
+@keyframes kenburns-3 {
+  from { transform: scale(1.12) translate(1.5%,  1%);   }
+  to   { transform: scale(1)    translate(0,     0);    }
+}

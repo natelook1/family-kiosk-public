@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+
+  family-api:
+    # Build on swarm-mgr-01 before deploying:
+    #   docker build -t family-kiosk-api:latest ./backend/api/
+    image: family-kiosk-api:latest
+    networks:
+      - proxy_stable
+    environment:
+      - PORT=3000
+      - DB_PATH=/data/family-kiosk.db
+      - R2_ACCOUNT_ID=YOUR_R2_ACCOUNT_ID
+      - R2_BUCKET_NAME=family-kiosk-photos
+      - R2_PUBLIC_URL=https://YOUR_R2_PUBLIC_URL
+      - LIVEKIT_WS_URL=wss://YOUR_LIVEKIT_URL
+      - FAMILY_APP_URL=https://YOUR_FAMILY_APP_URL
+    ports:
+      - target: 3000
+        published: 3001
+        protocol: tcp
+        mode: host
+    secrets:
+      - family_api_key
+      - r2_access_key_id
+      - r2_secret_access_key
+      - livekit_api_key
+      - livekit_api_secret
+      - fcm_service_account
+      - vapid_public_key
+      - vapid_private_key
+    volumes:
+      - family_db_data:/data
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == swarm-mgr-01
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=proxy_stable"
+        - "traefik.http.routers.family-api.rule=Host(`family.YOUR_DOMAIN`)"
+        - "traefik.http.routers.family-api.entrypoints=websecure"
+        - "traefik.http.routers.family-api.tls=true"
+        - "traefik.http.services.family-api-svc.loadbalancer.server.port=3000"
+
+networks:
+  proxy_stable:
+    external: true
+  default:
+    external: true
+    name: proxy_stable
+
+volumes:
+  family_db_data:
+
+secrets:
+  family_api_key:
+    external: true
+  r2_access_key_id:
+    external: true
+  r2_secret_access_key:
+    external: true
+  livekit_api_key:
+    external: true
+  livekit_api_secret:
+    external: true
+  fcm_service_account:
+    external: true
+  vapid_public_key:
+    external: true
+  vapid_private_key:
+    external: true

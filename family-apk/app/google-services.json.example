@@ -1,0 +1,10 @@
+{
+  "NOTE": "Download the real google-services.json from Firebase Console and place it here as google-services.json",
+  "Steps": [
+    "1. Go to console.firebase.google.com",
+    "2. Create a project (or use existing)",
+    "3. Add Android app with package name: ca.looknet.familykiosk.family",
+    "4. Download google-services.json into this folder (family-apk/app/)",
+    "5. Copy the FCM Server Key from Project Settings > Cloud Messaging into your server as FCM_SERVER_KEY env var"
+  ]
+}

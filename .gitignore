@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+**/build/
+kiosk-apk/app/release/
+family-apk/app/release/
+*.apk
+
+# env files
+.env
+.env.local
+*.local
+stack/stack.env
+
+# signing keys — NEVER commit
+keystores/
+*.jks
+*.keystore
+
+# local tooling
+.claude/
+gen-vapid.js
+*.dump
+
+# loose design assets
+logo.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editors
+.vscode/
+.idea/
+*.swp

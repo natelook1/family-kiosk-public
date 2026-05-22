@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kiosk Provisioning QR Code</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px; background: #f5f5f5; }
+    h1 { margin-bottom: 8px; }
+    p { color: #555; margin-bottom: 32px; }
+    #qrcode { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+    .steps { max-width: 480px; margin-top: 32px; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    .steps ol { padding-left: 20px; line-height: 2; }
+    code { background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Kiosk Device Provisioning</h1>
+  <p>Scan during Android setup to install app and set Device Owner automatically</p>
+  <div id="qrcode"></div>
+
+  <div class="steps">
+    <strong>Steps:</strong>
+    <ol>
+      <li>Factory reset the tablet</li>
+      <li>On the first <em>"Welcome"</em> screen, <strong>tap 6 times quickly</strong></li>
+      <li>Connect to WiFi when prompted</li>
+      <li>Scan this QR code</li>
+      <li>Wait for app to download and install (~2 min)</li>
+      <li>Device Owner will be set automatically</li>
+    </ol>
+    <p style="margin:0;color:#888;font-size:13px">Package: <code>ca.looknet.familykiosk</code></p>
+  </div>
+
+  <script>
+    const payload = {
+      "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME":
+        "ca.looknet.familykiosk/ca.looknet.familykiosk.DeviceAdminReceiver",
+      "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION":
+        "https://family.looknet.ca/kiosk/apk/download",
+      "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM":
+        "WdCx76FVxDlC3gW3N54JivZQo1v1RIPc9LgL7X0KHeE",
+      "android.app.extra.PROVISIONING_SKIP_ENCRYPTION": true,
+      "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true
+    };
+
+    new QRCode(document.getElementById("qrcode"), {
+      text: JSON.stringify(payload),
+      width: 400,
+      height: 400,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  </script>
+</body>
+</html>

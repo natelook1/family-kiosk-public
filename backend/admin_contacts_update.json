@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "/admin/contacts/update",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -256,
+        -96
+      ],
+      "id": "f026e362-2e9d-454b-8da5-89b61b30c77a",
+      "name": "Admin Contacts Update Webhook",
+      "webhookId": "f8a9b0c1-d2e3-4567-fabc-contactsupdate",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\n\nconst body = $input.first().json.body ?? {};\nconst contactId = $input.first().json.query?.contactId || body.contactId;\n\nif (!contactId) {\n  return [{ json: { success: false, error: 'contactId required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const exists = await redis.exists(`contact:${contactId}`);\n  if (!exists) {\n    await redis.quit();\n    return [{ json: { success: false, error: 'Contact not found' } }];\n  }\n\n  const updates = {};\n  if (body.name !== undefined) updates.name = body.name;\n  if (body.whatsappNumber !== undefined) updates.whatsappNumber = body.whatsappNumber;\n  if (body.profilePhotoUrl !== undefined) updates.profilePhotoUrl = body.profilePhotoUrl;\n\n  if (Object.keys(updates).length > 0) {\n    await redis.hset(`contact:${contactId}`, updates);\n  }\n\n  const contact = await redis.hgetall(`contact:${contactId}`);\n  await redis.quit();\n  return [{ json: { success: true, contactId, ...contact } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        -96
+      ],
+      "id": "24a531ce-5219-4ae7-aedb-f9fa1cccbd90",
+      "name": "Admin Contacts Update"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        160,
+        -96
+      ],
+      "id": "cc19a97b-e1af-4ba4-8309-b3cc309361be",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Contacts Update Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Contacts Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Contacts Update": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}

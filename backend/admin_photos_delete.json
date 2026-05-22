@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "/admin/photos/delete",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "aaa807a3-6f89-488e-8802-8c0478d42da1",
+      "name": "Admin Photos Delete Webhook",
+      "webhookId": "d8e9f0a1-b2c3-4567-defa-567890123457",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\nconst { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');\n\nconst photoId = $input.first().json.query?.photoId || $input.first().json.body?.photoId;\n\nif (!photoId) {\n  return [{ json: { success: false, error: 'photoId required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const photo = await redis.hgetall(`photo:${photoId}`);\n  if (!photo || !photo.patientId) {\n    await redis.quit();\n    return [{ json: { success: false, error: 'Photo not found' } }];\n  }\n\n  const s3 = new S3Client({\n    region: 'auto',\n    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,\n    credentials: {\n      accessKeyId: process.env.R2_ACCESS_KEY_ID,\n      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY\n    }\n  });\n\n  await s3.send(new DeleteObjectCommand({\n    Bucket: process.env.R2_BUCKET_NAME,\n    Key: photo.r2Key\n  }));\n\n  await redis.lrem(`patient:${photo.patientId}:photos`, 0, photoId);\n  await redis.del(`photo:${photoId}`);\n\n  await redis.quit();\n  return [{ json: { success: true, deletedPhotoId: photoId } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "6f5c3d9d-1efa-4117-883e-b2379c6c226b",
+      "name": "Admin Photos Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        0
+      ],
+      "id": "cf0be6f5-f029-4648-b5f2-43cf3db959e6",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Photos Delete Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Photos Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Photos Delete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}

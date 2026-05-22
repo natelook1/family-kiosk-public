@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "/admin/contacts/order",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        -64
+      ],
+      "id": "60bc8736-6308-4f85-a621-ae58a45b5dfb",
+      "name": "Admin Contacts Reorder Webhook",
+      "webhookId": "f2a3b4c5-d6e7-8901-fabc-901234567890",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\n\nconst body = $input.first().json.body ?? {};\nconst patientId = $input.first().json.query?.patientId || body.patientId;\nconst { order } = body;\n\nif (!patientId || !Array.isArray(order)) {\n  return [{ json: { success: false, error: 'patientId and order array are required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  await redis.del(`patient:${patientId}:contacts`);\n  if (order.length > 0) {\n    await redis.rpush(`patient:${patientId}:contacts`, ...order);\n  }\n  for (let i = 0; i < order.length; i++) {\n    await redis.hset(`contact:${order[i]}`, 'order', String(i));\n  }\n  await redis.quit();\n  return [{ json: { success: true } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -64
+      ],
+      "id": "bae47184-f9cf-4255-ba40-c08c2df52170",
+      "name": "Admin Contacts Reorder"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        256,
+        -64
+      ],
+      "id": "a6b3514a-9972-4f51-ad01-d05085dbd494",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Contacts Reorder Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Contacts Reorder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Contacts Reorder": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}

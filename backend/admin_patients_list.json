@@ -1,0 +1,82 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/admin/patients/list",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2208,
+        672
+      ],
+      "id": "85869eec-999a-4e45-8f43-5e73b024d183",
+      "name": "Admin Patients List Webhook",
+      "webhookId": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const patientIds = await redis.smembers('patients');\n\n  const patients = await Promise.all(\n    patientIds.map(async (id) => {\n      const p = await redis.hgetall(`patient:${id}`);\n      const contactCount = await redis.llen(`patient:${id}:contacts`);\n      const photoCount = await redis.llen(`patient:${id}:photos`);\n      return {\n        patientId: id,\n        name: p.name,\n        deviceId: p.deviceId || null,\n        status: p.status,\n        createdAt: p.createdAt,\n        contactCount,\n        photoCount\n      };\n    })\n  );\n\n  await redis.quit();\n  return [{ json: { patients } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        672
+      ],
+      "id": "c9d6d74e-e9db-4068-a921-ccf137003fd5",
+      "name": "Admin Patients List"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2624,
+        672
+      ],
+      "id": "b25c0a91-74fa-448e-abae-f19a17c73db3",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Patients List Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Patients List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Patients List": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "4b476e33ba7faa234e674aa0ec035697cc1f583c8d94efb450a17e68b6552664"
+  }
+}

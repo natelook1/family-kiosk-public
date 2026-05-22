@@ -1,0 +1,339 @@
+{
+  "baseUrl": "https://YOUR_DOMAIN/webhook",
+  "auth": {
+    "type": "header",
+    "header": "x-api-key",
+    "description": "API key required on all admin requests. Tablet requests use x-device-id instead."
+  },
+  "redisSchema": {
+    "patients": "Set of all patientIds — SMEMBERS patients",
+    "patient:{id}": "Hash — { name, deviceId, createdAt, status: active|inactive }",
+    "patient:{id}:contacts": "Ordered list of contactIds",
+    "patient:{id}:photos": "Ordered list of photoIds",
+    "contact:{id}": "Hash — { patientId, name, whatsappNumber, profilePhotoUrl, order }",
+    "photo:{id}": "Hash — { patientId, url, filename, uploadedAt, order }",
+    "device:{deviceId}": "String — patientId (reverse lookup for tablet registration)"
+  },
+  "endpoints": {
+    "tablet": {
+      "description": "Called by the React Native APK. Auth via x-device-id header.",
+      "routes": [
+        {
+          "id": "tablet_register",
+          "method": "POST",
+          "path": "/tablet/register",
+          "description": "Register a tablet device and pair it to a patient. Called on first launch or after factory reset.",
+          "headers": { "x-api-key": "string" },
+          "body": {
+            "deviceId": "string — unique device identifier (Android ID)",
+            "patientId": "string — UUID of patient to pair with"
+          },
+          "response": {
+            "success": true,
+            "deviceId": "string",
+            "patientId": "string"
+          }
+        },
+        {
+          "id": "tablet_sync",
+          "method": "GET",
+          "path": "/tablet/sync",
+          "description": "Primary sync endpoint. Returns all data the tablet needs — patient info, contacts, and photo URLs. Tablet polls this on launch and periodically.",
+          "headers": { "x-device-id": "string" },
+          "response": {
+            "patientId": "string",
+            "patientName": "string",
+            "contacts": [
+              {
+                "contactId": "string",
+                "name": "string",
+                "whatsappNumber": "string",
+                "profilePhotoUrl": "string | null",
+                "order": "number"
+              }
+            ],
+            "photos": [
+              {
+                "photoId": "string",
+                "url": "string",
+                "order": "number"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "admin": {
+      "description": "Called by the React admin UI on CF Pages. All routes require x-api-key header.",
+      "patients": [
+        {
+          "id": "admin_patients_list",
+          "method": "GET",
+          "path": "/admin/patients/list",
+          "description": "List all patients with summary info.",
+          "response": {
+            "patients": [
+              {
+                "patientId": "string",
+                "name": "string",
+                "deviceId": "string | null",
+                "status": "active | inactive",
+                "contactCount": "number",
+                "photoCount": "number",
+                "createdAt": "ISO8601",
+                "cachedPhotoCount": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "admin_patients_create",
+          "method": "POST",
+          "path": "/admin/patients/create",
+          "description": "Create a new patient record.",
+          "body": {
+            "name": "string"
+          },
+          "response": {
+            "patientId": "string",
+            "name": "string",
+            "deviceId": null,
+            "status": "active",
+            "createdAt": "ISO8601"
+          }
+        },
+        {
+          "id": "admin_patients_get",
+          "method": "GET",
+          "path": "/admin/patients/get",
+          "description": "Get full patient record including contacts and photos.",
+          "query": {
+            "patientId": "string"
+          },
+          "response": {
+            "patientId": "string",
+            "name": "string",
+            "deviceId": "string | null",
+            "status": "active | inactive",
+            "createdAt": "ISO8601",
+            "cachedPhotoCount": "number",
+            "contacts": [
+              {
+                "contactId": "string",
+                "name": "string",
+                "whatsappNumber": "string",
+                "profilePhotoUrl": "string | null",
+                "order": "number"
+              }
+            ],
+            "photos": [
+              {
+                "photoId": "string",
+                "url": "string",
+                "filename": "string",
+                "uploadedAt": "ISO8601",
+                "order": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "admin_patients_update",
+          "method": "PUT",
+          "path": "/admin/patients/update",
+          "description": "Update patient name or status.",
+          "body": {
+            "patientId": "string",
+            "name": "string?",
+            "status": "active | inactive?"
+          },
+          "response": {
+            "patientId": "string",
+            "name": "string",
+            "status": "active | inactive"
+          }
+        },
+        {
+          "id": "admin_patients_delete",
+          "method": "DELETE",
+          "path": "/admin/patients/delete",
+          "description": "Delete patient and all associated contacts and photos.",
+          "query": {
+            "patientId": "string"
+          },
+          "response": {
+            "success": true,
+            "deletedPatientId": "string"
+          }
+        }
+      ],
+      "contacts": [
+        {
+          "id": "admin_contacts_list",
+          "method": "GET",
+          "path": "/admin/contacts/list",
+          "description": "List all contacts for a patient, ordered by display order.",
+          "query": {
+            "patientId": "string"
+          },
+          "response": {
+            "contacts": [
+              {
+                "contactId": "string",
+                "name": "string",
+                "whatsappNumber": "string",
+                "profilePhotoUrl": "string | null",
+                "order": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "admin_contacts_create",
+          "method": "POST",
+          "path": "/admin/contacts/create",
+          "description": "Add a contact to a patient. Max 5 contacts per patient enforced server-side.",
+          "body": {
+            "patientId": "string",
+            "name": "string",
+            "whatsappNumber": "string — E.164 format e.g. +14165551234",
+            "profilePhotoUrl": "string? — R2 URL, upload photo first"
+          },
+          "response": {
+            "contactId": "string",
+            "name": "string",
+            "whatsappNumber": "string",
+            "profilePhotoUrl": "string | null",
+            "order": "number"
+          }
+        },
+        {
+          "id": "admin_contacts_update",
+          "method": "PUT",
+          "path": "/admin/contacts/update",
+          "description": "Update a contact's details.",
+          "body": {
+            "contactId": "string",
+            "name": "string?",
+            "whatsappNumber": "string?",
+            "profilePhotoUrl": "string?"
+          },
+          "response": {
+            "contactId": "string",
+            "name": "string",
+            "whatsappNumber": "string",
+            "profilePhotoUrl": "string | null"
+          }
+        },
+        {
+          "id": "admin_contacts_delete",
+          "method": "DELETE",
+          "path": "/admin/contacts/delete",
+          "description": "Remove a contact.",
+          "query": {
+            "contactId": "string"
+          },
+          "response": {
+            "success": true,
+            "deletedContactId": "string"
+          }
+        },
+        {
+          "id": "admin_contacts_reorder",
+          "method": "PUT",
+          "path": "/admin/contacts/order",
+          "description": "Update display order of contacts on the tablet.",
+          "body": {
+            "patientId": "string",
+            "order": ["contactId1", "contactId2", "contactId3"]
+          },
+          "response": {
+            "success": true
+          }
+        }
+      ],
+      "photos": [
+        {
+          "id": "admin_photos_list",
+          "method": "GET",
+          "path": "/admin/photos/list",
+          "description": "List all slideshow photos for a patient.",
+          "query": {
+            "patientId": "string"
+          },
+          "response": {
+            "photos": [
+              {
+                "photoId": "string",
+                "url": "string",
+                "filename": "string",
+                "uploadedAt": "ISO8601",
+                "order": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "admin_photos_upload_url",
+          "method": "POST",
+          "path": "/admin/photos/upload-url",
+          "description": "Request a presigned R2 upload URL. Admin UI uploads the file directly to R2, then calls /confirm.",
+          "body": {
+            "patientId": "string",
+            "filename": "string",
+            "contentType": "image/jpeg | image/png | image/webp"
+          },
+          "response": {
+            "uploadUrl": "string — presigned R2 PUT URL, expires in 5 minutes",
+            "r2Key": "string — store this, needed for confirm call",
+            "publicUrl": "string — the final R2 URL once uploaded"
+          }
+        },
+        {
+          "id": "admin_photos_confirm",
+          "method": "POST",
+          "path": "/admin/photos/confirm",
+          "description": "Confirm a photo upload after the file has been PUT to R2. Creates the photo record in Redis.",
+          "body": {
+            "patientId": "string",
+            "r2Key": "string",
+            "filename": "string"
+          },
+          "response": {
+            "photoId": "string",
+            "url": "string",
+            "filename": "string",
+            "uploadedAt": "ISO8601",
+            "order": "number"
+          }
+        },
+        {
+          "id": "admin_photos_delete",
+          "method": "DELETE",
+          "path": "/admin/photos/delete",
+          "description": "Delete a photo. Removes from Redis and deletes from R2.",
+          "query": {
+            "photoId": "string"
+          },
+          "response": {
+            "success": true,
+            "deletedPhotoId": "string"
+          }
+        },
+        {
+          "id": "admin_photos_reorder",
+          "method": "PUT",
+          "path": "/admin/photos/order",
+          "description": "Update slideshow display order.",
+          "body": {
+            "patientId": "string",
+            "order": ["photoId1", "photoId2", "photoId3"]
+          },
+          "response": {
+            "success": true
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "/admin/contacts/delete",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -192,
+        -64
+      ],
+      "id": "b965ea59-c48f-4bc0-a5cc-06f708ee54c3",
+      "name": "Admin Contacts Delete Webhook",
+      "webhookId": "b8c9d0e1-f2a3-4567-bcde-567890123456",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\n\nconst contactId = $input.first().json.query?.contactId || $input.first().json.body?.contactId;\n\nif (!contactId) {\n  return [{ json: { success: false, error: 'contactId required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const contact = await redis.hgetall(`contact:${contactId}`);\n  if (!contact || !contact.patientId) {\n    await redis.quit();\n    return [{ json: { success: false, error: 'Contact not found' } }];\n  }\n\n  await redis.lrem(`patient:${contact.patientId}:contacts`, 0, contactId);\n  await redis.del(`contact:${contactId}`);\n\n  await redis.quit();\n  return [{ json: { success: true, deletedContactId: contactId } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -64
+      ],
+      "id": "4e4710c7-aae5-46d7-b286-7334c569e689",
+      "name": "Admin Contacts Delete"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        224,
+        -64
+      ],
+      "id": "a3f4c7ce-03ef-43ea-bc02-8fe3dfa52bba",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Contacts Delete Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Contacts Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Contacts Delete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}

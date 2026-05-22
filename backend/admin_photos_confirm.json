@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/admin/photos/confirm",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        -80
+      ],
+      "id": "ecf8e541-1df5-410d-bd13-0294cd69c493",
+      "name": "Admin Photos Confirm Webhook",
+      "webhookId": "f4a5b6c7-d8e9-0123-fabc-123456789013",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\nconst { randomUUID } = require('crypto');\n\nconst body = $input.first().json.body ?? {};\nconst patientId = $input.first().json.query?.patientId || body.patientId;\nconst { r2Key, filename } = body;\n\nif (!patientId || !r2Key || !filename) {\n  return [{ json: { success: false, error: 'patientId, r2Key, and filename are required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const exists = await redis.exists(`patient:${patientId}`);\n  if (!exists) {\n    await redis.quit();\n    return [{ json: { success: false, error: 'Patient not found' } }];\n  }\n\n  const photoId = randomUUID();\n  const uploadedAt = new Date().toISOString();\n  const url = `${process.env.R2_PUBLIC_URL}/${r2Key}`;\n  const order = await redis.llen(`patient:${patientId}:photos`);\n\n  await redis.hset(`photo:${photoId}`, {\n    patientId,\n    url,\n    filename,\n    r2Key,\n    uploadedAt,\n    order: String(order)\n  });\n  await redis.rpush(`patient:${patientId}:photos`, photoId);\n\n  await redis.quit();\n  return [{ json: { photoId, url, filename, uploadedAt, order } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        -80
+      ],
+      "id": "8d796ee7-b514-41a9-bd74-216b9a12ddf4",
+      "name": "Admin Photos Confirm"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        176,
+        -80
+      ],
+      "id": "af0111a7-e8a0-4d0d-8d4c-6cb7a152f1bb",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Photos Confirm Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Photos Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Photos Confirm": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/admin/contacts/create",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        -80
+      ],
+      "id": "2ddbcd7e-92a7-44f3-995f-d84f0e4598dc",
+      "name": "Admin Contacts Create Webhook",
+      "webhookId": "f0a1b2c3-d4e5-6789-fabc-890123456789",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\nconst { randomUUID } = require('crypto');\n\nconst body = $input.first().json.body ?? {};\nconst patientId = $input.first().json.query?.patientId || body.patientId;\nconst { name, whatsappNumber, profilePhotoUrl } = body;\n\nif (!patientId || !name || !whatsappNumber) {\n  return [{ json: { success: false, error: 'patientId, name, and whatsappNumber are required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const exists = await redis.exists(`patient:${patientId}`);\n  if (!exists) {\n    await redis.quit();\n    return [{ json: { success: false, error: 'Patient not found' } }];\n  }\n\n  const count = await redis.llen(`patient:${patientId}:contacts`);\n  if (count >= 5) {\n    await redis.quit();\n    return [{ json: { success: false, error: 'Maximum 5 contacts allowed' } }];\n  }\n\n  const contactId = randomUUID();\n  const order = count;\n\n  await redis.hset(`contact:${contactId}`, {\n    patientId,\n    name,\n    whatsappNumber,\n    profilePhotoUrl: profilePhotoUrl || '',\n    order: String(order)\n  });\n  await redis.rpush(`patient:${patientId}:contacts`, contactId);\n\n  await redis.quit();\n  return [{ json: { contactId, name, whatsappNumber, profilePhotoUrl: profilePhotoUrl || null, order } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -80
+      ],
+      "id": "ecb08824-fa42-4030-bbed-34f1ec0ad2e2",
+      "name": "Admin Contacts Create"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        384,
+        -80
+      ],
+      "id": "bb24fab6-60f9-4ef7-a800-1338cb4315b8",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Contacts Create Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Contacts Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Contacts Create": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b476e33ba7faa234e674aa0ec035697cc1f583c8d94efb450a17e68b6552664"
+  }
+}
+

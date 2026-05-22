@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='%237c3aed'/><circle cx='16' cy='12' r='5' fill='white'/><path d='M6 26c0-5.5 4.5-9 10-9s10 3.5 10 9' fill='white'/></svg>" />
+    <title>Family Kiosk Admin</title>
+    <script>
+      // Apply theme before React renders to avoid flash
+      const t = localStorage.getItem('theme')
+      if (t !== 'light') document.documentElement.classList.add('dark')
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

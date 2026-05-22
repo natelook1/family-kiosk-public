@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLACE AT: family-apk/app/src/main/res/xml/file_paths.xml
+
+  Paths FileProvider is allowed to share via content:// URIs.
+  Used when handing the downloaded APK to the package installer
+  for self-update. Without this file, the FileProvider entry in
+  AndroidManifest.xml references a nonexistent resource and the
+  app will fail to build.
+-->
+<paths>
+    <!-- context.getFilesDir() — where UpdateManager saves APKs -->
+    <files-path name="apk_updates" path="/" />
+
+    <!-- context.getCacheDir() — alternate location if you ever switch -->
+    <cache-path name="apk_cache" path="/" />
+
+    <!-- context.getExternalFilesDir(null) — external-but-app-private -->
+    <external-files-path name="external_apk_updates" path="/" />
+</paths>

@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/admin/patients/create",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -80
+      ],
+      "id": "23f3c666-ad3b-40bd-8874-bcdbe5cb1edc",
+      "name": "Admin Patients Create Webhook",
+      "webhookId": "d0e1f2a3-b4c5-6789-defa-890123456789",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PtNCOdBetyCbSFgu",
+          "name": "X-API (Family)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Redis = require('ioredis');\nconst { randomUUID } = require('crypto');\n\nconst { name } = $input.first().json.body ?? {};\n\nif (!name) {\n  return [{ json: { success: false, error: 'name is required' } }];\n}\n\nconst redis = new Redis({ host: 'redis', port: 6379 });\n\ntry {\n  const patientId = randomUUID();\n  const createdAt = new Date().toISOString();\n\n  await redis.hset(`patient:${patientId}`, {\n    name,\n    deviceId: '',\n    status: 'active',\n    createdAt\n  });\n  await redis.sadd('patients', patientId);\n\n  await redis.quit();\n  return [{ json: { patientId, name, deviceId: null, status: 'active', createdAt } }];\n} catch (err) {\n  await redis.quit().catch(() => {});\n  throw err;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        -80
+      ],
+      "id": "a383ff61-0cea-4d05-96ba-bdcf00670011",
+      "name": "Admin Patients Create"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        272,
+        -80
+      ],
+      "id": "98debf68-85c5-424f-adb0-9d8b90984dc1",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Admin Patients Create Webhook": {
+      "main": [
+        [
+          {
+            "node": "Admin Patients Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Patients Create": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e90105473505ad8aeb191cbd1736f1626ba188e12bf5ea10c7fe63c08f0bb051"
+  }
+}
